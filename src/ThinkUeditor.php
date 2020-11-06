@@ -18,7 +18,7 @@
 namespace Hahadu\ThinkUeditor;
 use Hahadu\ThinkUeditor\Uploader;
 
-trait ThinkUeditor
+class ThinkUeditor
 {
     //  protected $ueditor_config=
     public function ueditor(){
