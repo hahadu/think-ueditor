@@ -1,0 +1,25 @@
+{
+    "name": "hahadu/think-ueditor",
+    "description": "",
+    "type": "library",
+    "require": {
+        "php": ">=7.1"
+    },
+    "require-dev": {
+        "php": ">=7.1"
+
+    },
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "hahadu",
+            "email": "582167246@qq.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Hahadu\\ThinkUeditor\\": "src/"
+        }
+    },
+        "minimum-stability": "dev"
+}
