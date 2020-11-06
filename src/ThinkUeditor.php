@@ -40,6 +40,7 @@ class ThinkUeditor
                 /* 上传文件 */
             case 'uploadfile':
                 $result = $this->u_upload($conf,$action);
+
                 break;
 
             /* 列出文件 */
@@ -127,6 +128,7 @@ class ThinkUeditor
 
         /* 生成上传实例对象并完成上传 */
         $up = new Uploader($fieldName, $config, $base64);
+        $result = $up->getFileInfo();
 
         /**
          * 得到上传文件所对应的各个参数,数组结构
@@ -141,7 +143,17 @@ class ThinkUeditor
          */
 
         /* 返回数据 */
-        return json_encode($up->getFileInfo());
+        try {
+            if(config('water.image_water')==true){
+                if(isset($result['url'])){
+                    $url = add_water('.'.$result['url']);
+                    $result['url'] = $url;
+                }
+            }
+        }catch (\Exception $e){
+            $result = $e;
+        }
+        return json_encode($result);
     }
 
     private function u_list($CONFIG,$action){
