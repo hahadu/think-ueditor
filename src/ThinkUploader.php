@@ -12,9 +12,11 @@ use think\Exception;
 use think\facade\Filesystem;
 use think\File;
 use think\file\UploadedFile;
+use Hahadu\Helper\FilesHelper;
 
 class ThinkUploader
 {
+    use Upfile;
     private $fileField; //文件域名
     /****
      * @var UploadedFile;
@@ -63,9 +65,10 @@ class ThinkUploader
     public function __construct($fileField, $config, $type = "upload")
     {
         $this->fileField = $fileField;
-        $this->disk = 'public';
+        $this->disk = $config['disks'];
         $this->config = $config;
         $this->type = $type;
+        file_put_contents('type.txt',$type);
         if ($type == "remote") {
             $this->saveRemote();
         } else if($type == "base64") {
@@ -83,35 +86,8 @@ class ThinkUploader
      */
     private function upFile()
     {
-        try{
-            file_put_contents('$this.txt',$this);
-            $this->file = request()->file($this->fileField);
-
-            $this->saveName = Filesystem::disk($this->disk)->putFile( 'images', $this->file);
-            file_put_contents('savename.txt',$this->saveName);
-            $this->oriName = $this->saveName; //文件名
-            $this->fileSize = $this->file->getSize(); //文件大小
-            $this->fileType = $this->getFileExt(); //end
-            $this->fullName = $this->getFullName(); //获取web可访问的文件路径
-            $this->filePath = $this->getFilePath(); //end
-            $this->fileName = $this->getFileName();
-            $this->stateInfo = $this->stateMap[0];
-        }catch (Exception $e){
-            $this->stateInfo = $e->getMessage();
-        }
-        file_put_contents('file.txt',$this->stateInfo);
-
-        //检查文件大小是否超出限制
-        if (!$this->checkSize()) {
-            $this->stateInfo = $this->getStateInfo("ERROR_SIZE_EXCEED");
-            return;
-        }
-
-        //检查是否不允许的文件格式
-        if (!$this->checkType()) {
-            $this->stateInfo = $this->getStateInfo("ERROR_TYPE_NOT_ALLOWED");
-            return;
-        }
+        $this->file = request()->file($this->fileField);
+        $this->uploadFile();
 
     }
     /**
@@ -120,26 +96,8 @@ class ThinkUploader
      */
     private function upBase64()
     {
-        try{
-            $this->base64_cache_files();
-            $this->file = request()->file($this->fileField);
-            $this->saveName = Filesystem::disk($this->disk)->putFile( 'images', $this->file);;
-            $this->oriName = $this->saveName; //文件名
-            $this->fileSize = $this->file->getSize(); //文件大小
-            $this->fileType = $this->getFileExt(); //end
-            $this->fullName = $this->getFullName(); //获取web可访问的文件路径
-            $this->filePath = $this->getFilePath(); //end
-            $this->fileName = $this->getFileName();
-            $this->stateInfo = $this->stateMap[0];
-        }catch (Exception $e){
-            $this->stateInfo = $e->getMessage();
-        }
-
-        //检查文件大小是否超出限制
-        if (!$this->checkSize()) {
-            $this->stateInfo = $this->getStateInfo("ERROR_SIZE_EXCEED");
-            return;
-        }
+        $this->base64_cache_files();
+        $this->uploadFile();
 
     }
 
@@ -170,47 +128,11 @@ class ThinkUploader
             return;
         }
 
-        //打开输出缓冲区并获取远程图片
-        ob_start();
-        $context = stream_context_create(
-            array('http' => array(
-                'follow_location' => false // don't follow redirects
-            ))
-        );
-        readfile($imgUrl, false, $context);
-        $img = ob_get_contents();
-        ob_end_clean();
-        preg_match("/[\/]([^\/]*)[\.]?[^\.\/]*$/", $imgUrl, $m);
+        $img_cache = FilesHelper::download_file($imgUrl,Filesystem::path("cache_".time().'.'.$fileType));
+        $this->file = new File($img_cache);
 
-        $this->oriName = $m ? $m[1]:"";
-        $this->fileSize = strlen($img);
-        $this->fileType = $this->getFileExt();
-        $this->fullName = $this->getFullName();
-        $this->filePath = $this->getFilePath();
-        $this->fileName = $this->getFileName();
-        $dirname = dirname($this->filePath);
+        $this->uploadFile();
 
-        //检查文件大小是否超出限制
-        if (!$this->checkSize()) {
-            $this->stateInfo = $this->getStateInfo("ERROR_SIZE_EXCEED");
-            return;
-        }
-
-        //创建目录失败
-        if (!file_exists($dirname) && !mkdir($dirname, 0777, true)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_CREATE_DIR");
-            return;
-        } else if (!is_writeable($dirname)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_DIR_NOT_WRITEABLE");
-            return;
-        }
-
-        //移动文件
-        if (!(file_put_contents($this->filePath, $img) && file_exists($this->filePath))) { //移动失败
-            $this->stateInfo = $this->getStateInfo("ERROR_WRITE_CONTENT");
-        } else { //移动成功
-            $this->stateInfo = $this->stateMap[0];
-        }
 
     }
 
@@ -231,14 +153,6 @@ class ThinkUploader
         return validate($validate);
     }
 
-    /**
-     * 获取文件扩展名
-     * @return string
-     */
-    private function getFileExt()
-    {
-        return $this->file->getOriginalExtension();
-    }
 
     private function base64_cache_files(){
         $base64Data = request()->post($this->fileField);
@@ -251,53 +165,6 @@ class ThinkUploader
     }
 
 
-    /**
-     * 重命名文件
-     * @return string
-     */
-    private function getFullName()
-    {
-       $url =  Filesystem::getDiskConfig($this->disk,'url');
-       return $url.'/'.$this->saveName;
-
-    }
-
-    /**
-     * 获取文件名
-     * @return string
-     */
-    private function getFileName () {
-        return substr($this->filePath, strrpos($this->filePath, '/') + 1);
-    }
-
-    /**
-     * 获取文件完整路径
-     * @return string
-     */
-    private function getFilePath()
-    {
-        return Filesystem::path($this->saveName);
-    }
-
-
-    /**
-     * 文件类型检测
-     * @return bool
-     */
-    private function checkType()
-    {
-        file_put_contents('ext.txt',$this->getFileExt());
-        return in_array($this->getFileExt(), $this->config["allowFiles"]);
-    }
-
-    /**
-     * 文件大小检测
-     * @return bool
-     */
-    private function  checkSize()
-    {
-        return $this->fileSize <= ($this->config["maxSize"]);
-    }
 
     /**
      * 获取当前上传成功文件的各项信息

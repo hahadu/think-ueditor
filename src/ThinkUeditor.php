@@ -16,19 +16,22 @@
  **/
 
 namespace Hahadu\ThinkUeditor;
+use Hahadu\ThinkUeditor\Uploader;
+
 
 class ThinkUeditor
 {
+
     //  protected $ueditor_config=
     public function ueditor(){
+
         $conf = UeditorConfig::config();
 
         $action = request()->param('action');
-        file_put_contents('action.txt',$action);
 
         switch ($action) {
             case 'config':
-                $result =  json_encode($conf);
+                $result = $this->conf_die();
                 break;
 
             /* 上传图片 */
@@ -81,57 +84,57 @@ class ThinkUeditor
 
     /****
      * 上传文件
-     * @param $CONFIG
+     * @param $_conf
      * @param $action
      * @return false|string
      */
-    private function upload($CONFIG,$action){
+    private function upload($_conf, $action){
 
         /* 上传配置 */
         $base64 = "upload";
-        switch (htmlspecialchars($action)) {
+        switch ($action) {
             case 'uploadimage':
                 $config = array(
-                    "path" => $CONFIG['imagePath'],
-                    "maxSize" => $CONFIG['imageMaxSize'],
-                    "allowFiles" => $CONFIG['imageAllowFiles']
+                    "path" => $_conf['imagePath'],
+                    "maxSize" => $_conf['imageMaxSize'],
+                    "allowFiles" => $_conf['imageAllowFiles']
                 );
-                $fieldName = $CONFIG['imageFieldName'];
+                $fieldName = $_conf['imageFieldName'];
                 break;
             case 'uploadscrawl':
+
                 $config = array(
-                    "path" => $CONFIG['scrawlPath'],
-                    "maxSize" => $CONFIG['scrawlMaxSize'],
-                    "allowFiles" => $CONFIG['scrawlAllowFiles'],
+                    "path" => $_conf['scrawlPath'],
+                    "maxSize" => $_conf['scrawlMaxSize'],
+                    "allowFiles" => $_conf['scrawlAllowFiles'],
                     "oriName" => md5(time().rand(0,99)).'.png',
                 );
-                $fieldName = $CONFIG['scrawlFieldName'];
+                $fieldName = $_conf['scrawlFieldName'];
                 $base64 = "base64";
                 break;
             case 'uploadvideo':
                 $config = array(
-                    "path" => $CONFIG['videoPath'],
-                    "maxSize" => $CONFIG['videoMaxSize'],
-                    "allowFiles" => $CONFIG['videoAllowFiles']
+                    "path" => $_conf['videoPath'],
+                    "maxSize" => $_conf['videoMaxSize'],
+                    "allowFiles" => $_conf['videoAllowFiles']
                 );
-                $fieldName = $CONFIG['videoFieldName'];
+                $fieldName = $_conf['videoFieldName'];
                 break;
             case 'uploadfile':
             default:
                 $config = array(
-                    "path" => $CONFIG['filePath'],
-                    "maxSize" => $CONFIG['fileMaxSize'],
-                    "allowFiles" => $CONFIG['fileAllowFiles']
+                    "path" => $_conf['filePath'],
+                    "maxSize" => $_conf['fileMaxSize'],
+                    "allowFiles" => $_conf['fileAllowFiles']
                 );
-                $fieldName = $CONFIG['fileFieldName'];
+                $fieldName = $_conf['fileFieldName'];
                 break;
         }
-
+        $config['disks'] = $_conf['disks'];
         /* 生成上传实例对象并完成上传 */
-        file_put_contents('xxx.txt','???');
         $up = new ThinkUploader($fieldName, $config, $base64);
         $result = $up->getFileInfo();
-        file_put_contents('t_info.txt',json_encode($result));
+        file_put_contents('e.txt',json_encode($result));
 
         /**
          * 得到上传文件所对应的各个参数,数组结构
@@ -225,7 +228,7 @@ class ThinkUeditor
             $source = request()->param($fieldName);
         }
         foreach ($source as $imgUrl) {
-            $item = new ThinkUploader($imgUrl, $config, "remote");
+            $item = new Uploader($imgUrl, $config, "remote");
             $info = $item->getFileInfo();
             array_push($list, array(
                 "state" => $info["state"],
@@ -266,6 +269,17 @@ class ThinkUeditor
             }
         }
         return $files;
+    }
+
+    /****
+     * 编辑器需要一个原生的配置项来完成验证，所以这个文件是假的，不要动
+     * @return false|string
+     */
+    private function conf_die(){
+
+        $CONFIG = json_decode(preg_replace("/\/\*[\s\S]+?\*\//", "", file_get_contents(dirname(__FILE__)."/config.json")), true);
+
+        return json_encode($CONFIG);
     }
 
 }
