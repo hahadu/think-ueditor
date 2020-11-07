@@ -3,7 +3,9 @@
     "description": "",
     "type": "library",
     "require": {
-        "php": ">=7.1"
+        "php": ">=7.1",
+        "hahadu/image-factory": "^1.0",
+        "hahadu/think-helper": "*"
     },
     "require-dev": {
         "php": ">=7.1"

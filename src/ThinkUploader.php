@@ -8,10 +8,21 @@
  * UEditor编辑器通用上传类
  */
 namespace Hahadu\ThinkUeditor;
-class Uploader
+use think\Exception;
+use think\facade\Filesystem;
+use think\File;
+use think\file\UploadedFile;
+
+class ThinkUploader
 {
     private $fileField; //文件域名
+    /****
+     * @var UploadedFile;
+     */
     private $file; //文件上传对象
+    private $saveName;
+    private $disk = 'public';
+    private $type;
     private $base64; //文件上传对象
     private $config; //配置信息
     private $oriName; //原始文件名
@@ -52,6 +63,7 @@ class Uploader
     public function __construct($fileField, $config, $type = "upload")
     {
         $this->fileField = $fileField;
+        $this->disk = 'public';
         $this->config = $config;
         $this->type = $type;
         if ($type == "remote") {
@@ -71,33 +83,23 @@ class Uploader
      */
     private function upFile()
     {
-        $file = $this->file = $_FILES[$this->fileField];
-        if (!$file) {
-            $this->stateInfo = $this->getStateInfo("ERROR_FILE_NOT_FOUND");
-            return;
-        }
-        if ($this->file['error']) {
-            $this->stateInfo = $this->getStateInfo($file['error']);
-            return;
-        } else if (!file_exists($file['tmp_name'])) {
-            $this->stateInfo = $this->getStateInfo("ERROR_TMP_FILE_NOT_FOUND");
-            return;
-        } else if (!is_uploaded_file($file['tmp_name'])) {
-            $this->stateInfo = $this->getStateInfo("ERROR_TMPFILE");
-            return;
-        }
+        try{
+            file_put_contents('$this.txt',$this);
+            $this->file = request()->file($this->fileField);
 
-        $this->oriName = $file['name'];
-        $this->fileSize = $file['size'];
-        $this->fileType = $this->getFileExt();
-        $this->fullName = $this->getFullName();
-        file_put_contents('u_fullname.txt',$this->getFullName());
-        $this->filePath = $this->getFilePath();
-        file_put_contents('u_filePath.txt',$this->getFilePath());
-        $this->fileName = $this->getFileName();
-        file_put_contents('u_fileName.txt',$this->getFileName());
-        $dirname = dirname($this->filePath);
-     //   file_put_contents('u_dirname.txt',$dirname);
+            $this->saveName = Filesystem::disk($this->disk)->putFile( 'images', $this->file);
+            file_put_contents('savename.txt',$this->saveName);
+            $this->oriName = $this->saveName; //文件名
+            $this->fileSize = $this->file->getSize(); //文件大小
+            $this->fileType = $this->getFileExt(); //end
+            $this->fullName = $this->getFullName(); //获取web可访问的文件路径
+            $this->filePath = $this->getFilePath(); //end
+            $this->fileName = $this->getFileName();
+            $this->stateInfo = $this->stateMap[0];
+        }catch (Exception $e){
+            $this->stateInfo = $e->getMessage();
+        }
+        file_put_contents('file.txt',$this->stateInfo);
 
         //检查文件大小是否超出限制
         if (!$this->checkSize()) {
@@ -111,60 +113,32 @@ class Uploader
             return;
         }
 
-        //创建目录失败
-        if (!file_exists($dirname) && !mkdir($dirname, 0777, true)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_CREATE_DIR");
-            return;
-        } else if (!is_writeable($dirname)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_DIR_NOT_WRITEABLE");
-            return;
-        }
-
-        //移动文件
-        if (!(move_uploaded_file($file["tmp_name"], $this->filePath) && file_exists($this->filePath))) { //移动失败
-            $this->stateInfo = $this->getStateInfo("ERROR_FILE_MOVE");
-        } else { //移动成功
-            $this->stateInfo = $this->stateMap[0];
-        }
     }
-
     /**
      * 处理base64编码的图片上传
      * @return mixed
      */
     private function upBase64()
     {
-        $base64Data = $_POST[$this->fileField];
-        $img = base64_decode($base64Data);
-
-        $this->oriName = $this->config['oriName'];
-        $this->fileSize = strlen($img);
-        $this->fileType = $this->getFileExt();
-        $this->fullName = $this->getFullName();
-        $this->filePath = $this->getFilePath();
-        $this->fileName = $this->getFileName();
-        $dirname = dirname($this->filePath);
+        try{
+            $this->base64_cache_files();
+            $this->file = request()->file($this->fileField);
+            $this->saveName = Filesystem::disk($this->disk)->putFile( 'images', $this->file);;
+            $this->oriName = $this->saveName; //文件名
+            $this->fileSize = $this->file->getSize(); //文件大小
+            $this->fileType = $this->getFileExt(); //end
+            $this->fullName = $this->getFullName(); //获取web可访问的文件路径
+            $this->filePath = $this->getFilePath(); //end
+            $this->fileName = $this->getFileName();
+            $this->stateInfo = $this->stateMap[0];
+        }catch (Exception $e){
+            $this->stateInfo = $e->getMessage();
+        }
 
         //检查文件大小是否超出限制
         if (!$this->checkSize()) {
             $this->stateInfo = $this->getStateInfo("ERROR_SIZE_EXCEED");
             return;
-        }
-
-        //创建目录失败
-        if (!file_exists($dirname) && !mkdir($dirname, 0777, true)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_CREATE_DIR");
-            return;
-        } else if (!is_writeable($dirname)) {
-            $this->stateInfo = $this->getStateInfo("ERROR_DIR_NOT_WRITEABLE");
-            return;
-        }
-
-        //移动文件
-        if (!(file_put_contents($this->filePath, $img) && file_exists($this->filePath))) { //移动失败
-            $this->stateInfo = $this->getStateInfo("ERROR_WRITE_CONTENT");
-        } else { //移动成功
-            $this->stateInfo = $this->stateMap[0];
         }
 
     }
@@ -250,14 +224,32 @@ class Uploader
         return !$this->stateMap[$errCode] ? $this->stateMap["ERROR_UNKNOWN"] : $this->stateMap[$errCode];
     }
 
+    private function validate(){
+        $validate = [
+
+        ];
+        return validate($validate);
+    }
+
     /**
      * 获取文件扩展名
      * @return string
      */
     private function getFileExt()
     {
-        return strtolower(strrchr($this->oriName, '.'));
+        return $this->file->getOriginalExtension();
     }
+
+    private function base64_cache_files(){
+        $base64Data = request()->post($this->fileField);
+        $img = base64_decode($base64Data);
+
+        $cache_path = Filesystem::path($this->config['oriName']);
+        file_put_contents($cache_path,$img);
+        $this->file = new File($cache_path);
+        return $this->file;
+    }
+
 
     /**
      * 重命名文件
@@ -265,36 +257,9 @@ class Uploader
      */
     private function getFullName()
     {
-        //替换日期事件
-        $t = time();
-        $d = explode('-', date("Y-y-m-d-H-i-s"));
-        $format = $this->config["pathFormat"];
-        $format = str_replace("{yyyy}", $d[0], $format);
-        $format = str_replace("{yy}", $d[1], $format);
-        $format = str_replace("{mm}", $d[2], $format);
-        $format = str_replace("{dd}", $d[3], $format);
-        $format = str_replace("{hh}", $d[4], $format);
-        $format = str_replace("{ii}", $d[5], $format);
-        $format = str_replace("{ss}", $d[6], $format);
-        $format = str_replace("{time}", $t, $format);
+       $url =  Filesystem::getDiskConfig($this->disk,'url');
+       return $url.'/'.$this->saveName;
 
-        //过滤文件名的非法字符,并替换文件名
-        $oriName = substr($this->oriName, 0, strrpos($this->oriName, '.'));
-        $oriName = preg_replace("/[\|\?\"\<\>\/\*\\\\]+/", '', $oriName);
-        $format = str_replace("{filename}", $oriName, $format);
-
-        //替换随机字符串
-        $randNum = rand(1, 10000000000) . rand(1, 10000000000);
-        if (preg_match("/\{rand\:([\d]*)\}/i", $format, $matches)) {
-            $format = preg_replace("/\{rand\:[\d]*\}/i", substr($randNum, 0, $matches[1]), $format);
-        }
-
-        if($this->fileType){
-            $ext = $this->fileType;
-        } else {
-            $ext = $this->getFileExt();
-        }
-        return $format . $ext;
     }
 
     /**
@@ -311,17 +276,9 @@ class Uploader
      */
     private function getFilePath()
     {
-        $fullname = $this->fullName;
-        $rootPath = $_SERVER['DOCUMENT_ROOT'];
-
-        if (substr($fullname, 0, 1) != '/') {
-            $fullname = '/' . $fullname;
-        }
-        file_put_contents('fullname.txt',$fullname);
-        file_put_contents('rootPath.txt',$rootPath);
-
-        return $rootPath . $fullname;
+        return Filesystem::path($this->saveName);
     }
+
 
     /**
      * 文件类型检测
@@ -329,6 +286,7 @@ class Uploader
      */
     private function checkType()
     {
+        file_put_contents('ext.txt',$this->getFileExt());
         return in_array($this->getFileExt(), $this->config["allowFiles"]);
     }
 
@@ -347,12 +305,23 @@ class Uploader
      */
     public function getFileInfo()
     {
+        //添加水印
+        try {
+            if(config('water.add_water_type')!=0){
+                if(!empty($this->fullName)){
+                    $this->fullName = add_water('.'.$this->fullName);
+                }
+            }
+        }catch (\Exception $e){
+            $this->stateInfo = $e->getMessage();
+        }
+
         return array(
             "state" => $this->stateInfo,
             "url" => $this->fullName,
             "title" => $this->fileName,
             "original" => $this->oriName,
-            "type" => $this->fileType,
+            "type" => '.'.$this->fileType,
             "size" => $this->fileSize
         );
     }

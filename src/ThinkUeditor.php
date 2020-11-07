@@ -16,7 +16,6 @@
  **/
 
 namespace Hahadu\ThinkUeditor;
-use Hahadu\ThinkUeditor\Uploader;
 
 class ThinkUeditor
 {
@@ -25,6 +24,7 @@ class ThinkUeditor
         $conf = UeditorConfig::config();
 
         $action = request()->param('action');
+        file_put_contents('action.txt',$action);
 
         switch ($action) {
             case 'config':
@@ -37,9 +37,10 @@ class ThinkUeditor
             case 'uploadscrawl':
                 /* 上传视频 */
             case 'uploadvideo':
+
                 /* 上传文件 */
             case 'uploadfile':
-                $result = $this->u_upload($conf,$action);
+                $result = $this->upload($conf,$action);
 
                 break;
 
@@ -84,14 +85,14 @@ class ThinkUeditor
      * @param $action
      * @return false|string
      */
-    private function u_upload($CONFIG,$action){
+    private function upload($CONFIG,$action){
 
         /* 上传配置 */
         $base64 = "upload";
         switch (htmlspecialchars($action)) {
             case 'uploadimage':
                 $config = array(
-                    "pathFormat" => $CONFIG['imagePathFormat'],
+                    "path" => $CONFIG['imagePath'],
                     "maxSize" => $CONFIG['imageMaxSize'],
                     "allowFiles" => $CONFIG['imageAllowFiles']
                 );
@@ -99,17 +100,17 @@ class ThinkUeditor
                 break;
             case 'uploadscrawl':
                 $config = array(
-                    "pathFormat" => $CONFIG['scrawlPathFormat'],
+                    "path" => $CONFIG['scrawlPath'],
                     "maxSize" => $CONFIG['scrawlMaxSize'],
                     "allowFiles" => $CONFIG['scrawlAllowFiles'],
-                    "oriName" => "scrawl.png"
+                    "oriName" => md5(time().rand(0,99)).'.png',
                 );
                 $fieldName = $CONFIG['scrawlFieldName'];
                 $base64 = "base64";
                 break;
             case 'uploadvideo':
                 $config = array(
-                    "pathFormat" => $CONFIG['videoPathFormat'],
+                    "path" => $CONFIG['videoPath'],
                     "maxSize" => $CONFIG['videoMaxSize'],
                     "allowFiles" => $CONFIG['videoAllowFiles']
                 );
@@ -118,7 +119,7 @@ class ThinkUeditor
             case 'uploadfile':
             default:
                 $config = array(
-                    "pathFormat" => $CONFIG['filePathFormat'],
+                    "path" => $CONFIG['filePath'],
                     "maxSize" => $CONFIG['fileMaxSize'],
                     "allowFiles" => $CONFIG['fileAllowFiles']
                 );
@@ -127,8 +128,10 @@ class ThinkUeditor
         }
 
         /* 生成上传实例对象并完成上传 */
-        $up = new Uploader($fieldName, $config, $base64);
+        file_put_contents('xxx.txt','???');
+        $up = new ThinkUploader($fieldName, $config, $base64);
         $result = $up->getFileInfo();
+        file_put_contents('t_info.txt',json_encode($result));
 
         /**
          * 得到上传文件所对应的各个参数,数组结构
@@ -143,16 +146,6 @@ class ThinkUeditor
          */
 
         /* 返回数据 */
-        try {
-            if(config('water.image_water')==true){
-                if(isset($result['url'])){
-                    $url = add_water('.'.$result['url']);
-                    $result['url'] = $url;
-                }
-            }
-        }catch (\Exception $e){
-            $result = $e;
-        }
         return json_encode($result);
     }
 
@@ -232,7 +225,7 @@ class ThinkUeditor
             $source = request()->param($fieldName);
         }
         foreach ($source as $imgUrl) {
-            $item = new Uploader($imgUrl, $config, "remote");
+            $item = new ThinkUploader($imgUrl, $config, "remote");
             $info = $item->getFileInfo();
             array_push($list, array(
                 "state" => $info["state"],
@@ -252,7 +245,7 @@ class ThinkUeditor
     }
 
 
-    private function getfiles($path, $allowFiles, &$files = array())
+    public function getfiles($path, $allowFiles, &$files = array())
     {
         if (!is_dir($path)) return null;
         if(substr($path, strlen($path) - 1) != '/') $path .= '/';
@@ -261,7 +254,7 @@ class ThinkUeditor
             if ($file != '.' && $file != '..') {
                 $path2 = $path . $file;
                 if (is_dir($path2)) {
-                    getfiles($path2, $allowFiles, $files);
+                    $this->getfiles($path2, $allowFiles, $files);
                 } else {
                     if (preg_match("/\.(".$allowFiles.")$/i", $file)) {
                         $files[] = array(
