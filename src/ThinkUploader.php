@@ -68,7 +68,6 @@ class ThinkUploader
         $this->disk = $config['disks'];
         $this->config = $config;
         $this->type = $type;
-        file_put_contents('type.txt',$type);
         if ($type == "remote") {
             $this->saveRemote();
         } else if($type == "base64") {
