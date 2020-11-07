@@ -63,7 +63,6 @@ trait Upfile
      */
     private function getFileExt()
     {
-        file_put_contents('??','');
         return $this->file->extension();
     }
     /**
