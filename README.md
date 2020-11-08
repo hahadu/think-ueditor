@@ -9,7 +9,7 @@ thinkphp6-ueditor文件上传模块
     public function ueditor(){
         $ueditor = new ThinkUeditor();
         echo $ueditor->ueditor(); 
-        die; //防止track冲突，开发模式不要用return
+        die; //防止开发模式下track冲突，
     }
 ``` 
 然后模板文件：
