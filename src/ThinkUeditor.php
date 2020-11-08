@@ -16,16 +16,17 @@
  **/
 
 namespace Hahadu\ThinkUeditor;
-use Hahadu\ThinkUeditor\Uploader;
-
+use Hahadu\ThinkUeditor\Uploader\Uploader;
+use Hahadu\ThinkUeditor\UeditorConfig;
 
 class ThinkUeditor
 {
+    public $config ;
+    public function __construct(){
+        $this->config = new UeditorConfig();
+    }
 
-    //  protected $ueditor_config=
     public function ueditor(){
-
-        $conf = UeditorConfig::config();
 
         $action = request()->param('action');
 
@@ -43,7 +44,7 @@ class ThinkUeditor
 
                 /* 上传文件 */
             case 'uploadfile':
-                $result = $this->upload($conf,$action);
+                $result = $this->upload($action);
 
                 break;
 
@@ -51,12 +52,12 @@ class ThinkUeditor
             case 'listfile':
                 /* 列出图片 */
             case 'listimage':
-                $result = $this->u_list($conf,$action);
+                $result = $this->list($action);
                 break;
 
             /* 抓取远程文件 */
             case 'catchimage':
-                $result = $this->u_crawler($conf);
+                $result = $this->crawler();
                 break;
 
             default:
@@ -88,51 +89,33 @@ class ThinkUeditor
      * @param $action
      * @return false|string
      */
-    private function upload($_conf, $action){
+    private function upload($action){
 
         /* 上传配置 */
         $base64 = "upload";
         switch ($action) {
             case 'uploadimage':
-                $config = array(
-                    "path" => $_conf['imagePath'],
-                    "maxSize" => $_conf['imageMaxSize'],
-                    "allowFiles" => $_conf['imageAllowFiles']
-                );
-                $fieldName = $_conf['imageFieldName'];
+                $config = $this->config::get_up_image();
+                $fieldName = $config['fieldName'];
                 break;
             case 'uploadscrawl':
 
-                $config = array(
-                    "path" => $_conf['scrawlPath'],
-                    "maxSize" => $_conf['scrawlMaxSize'],
-                    "allowFiles" => $_conf['scrawlAllowFiles'],
-                    "oriName" => md5(time().rand(0,99)).'.png',
-                );
-                $fieldName = $_conf['scrawlFieldName'];
+                $config = $this->config::get_up_scrawl();
+                $fieldName = $config['fieldName'];
                 $base64 = "base64";
                 break;
             case 'uploadvideo':
-                $config = array(
-                    "path" => $_conf['videoPath'],
-                    "maxSize" => $_conf['videoMaxSize'],
-                    "allowFiles" => $_conf['videoAllowFiles']
-                );
-                $fieldName = $_conf['videoFieldName'];
+                $config = $this->config::get_up_videos();
+                $fieldName = $config['fieldName'];
                 break;
             case 'uploadfile':
             default:
-                $config = array(
-                    "path" => $_conf['filePath'],
-                    "maxSize" => $_conf['fileMaxSize'],
-                    "allowFiles" => $_conf['fileAllowFiles']
-                );
-                $fieldName = $_conf['fileFieldName'];
+                $config = $this->config::get_up_files();
+                $fieldName = $config['fieldName'];
                 break;
         }
-        $config['disks'] = $_conf['disks'];
         /* 生成上传实例对象并完成上传 */
-        $up = new ThinkUploader($fieldName, $config, $base64);
+        $up = new Uploader($fieldName, $config, $base64);
         $result = $up->getFileInfo();
 
         /**
@@ -151,20 +134,21 @@ class ThinkUeditor
         return json_encode($result);
     }
 
-    private function u_list($CONFIG,$action){
+    private function list($action){
+        $manager = $this->config::get_manager();
         switch ($action) {
             /* 列出文件 */
             case 'listfile':
-                $allowFiles = $CONFIG['fileManagerAllowFiles'];
-                $listSize = $CONFIG['fileManagerListSize'];
-                $path = $CONFIG['fileManagerListPath'];
+                $allowFiles = $manager['file']['allowFiles'];
+                $listSize = $manager['file']['listSize'];
+                $path = $manager['file']['listPath'];
                 break;
             /* 列出图片 */
             case 'listimage':
             default:
-                $allowFiles = $CONFIG['imageManagerAllowFiles'];
-                $listSize = $CONFIG['imageManagerListSize'];
-                $path = $CONFIG['imageManagerListPath'];
+                $allowFiles = $manager['image']['allowFiles'];
+                $listSize = $manager['image']['listSize'];
+                $path = $manager['image']['listPath'];
         }
         $allowFiles = substr(str_replace(".", "|", join("", $allowFiles)), 1);
 
@@ -209,15 +193,10 @@ class ThinkUeditor
 
     }
 
-    private function u_crawler($CONFIG){
+    private function crawler(){
         /* 上传配置 */
-        $config = array(
-            "pathFormat" => $CONFIG['catcherPathFormat'],
-            "maxSize" => $CONFIG['catcherMaxSize'],
-            "allowFiles" => $CONFIG['catcherAllowFiles'],
-            "oriName" => "remote.png"
-        );
-        $fieldName = $CONFIG['catcherFieldName'];
+        $config = $this->config::get_up_catcher();
+        $fieldName = $config['fieldName'];
 
         /* 抓取远程图片 */
         $list = array();
@@ -275,8 +254,12 @@ class ThinkUeditor
      * @return false|string
      */
     private function conf_die(){
+        if(is_file(config_path('config.json'))){
+            $CONFIG = json_decode(preg_replace("/\/\*[\s\S]+?\*\//", "", file_get_contents(config_path('config.json'))), true);
+        }else{
+            $CONFIG = json_decode(preg_replace("/\/\*[\s\S]+?\*\//", "", file_get_contents(dirname(__FILE__)."/config.json")), true);
+        }
 
-        $CONFIG = json_decode(preg_replace("/\/\*[\s\S]+?\*\//", "", file_get_contents(dirname(__FILE__)."/config.json")), true);
 
         return json_encode($CONFIG);
     }

@@ -1,7 +1,7 @@
 {
     "name": "hahadu/think-ueditor",
     "description": "",
-    "type": "library",
+    "type": "think-extend",
     "require": {
         "php": ">=7.1",
         "hahadu/image-factory": "^1.0",
@@ -23,5 +23,14 @@
             "Hahadu\\ThinkUeditor\\": "src/"
         }
     },
-        "minimum-stability": "dev"
+    "extra": {
+        "think": {
+            "config": {
+                "ueditor": "config/ueditor.php",
+                "water": "config/water.php"
+            }
+        }
+    },
+
+    "minimum-stability": "dev"
 }
