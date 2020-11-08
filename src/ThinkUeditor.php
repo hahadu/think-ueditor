@@ -71,16 +71,15 @@ class ThinkUeditor
 
         if (!empty(request()->param("callback"))) {
             if (preg_match("/^[\w_]+$/", request()->param("callback"))) {
-                echo htmlspecialchars(request()->param("callback")) . '(' . $result . ')';
+                return htmlspecialchars(request()->param("callback")) . '(' . $result . ')';
             } else {
-                echo json_encode(array(
+                return json_encode(array(
                     'state'=> 'callback参数不合法'
                 ));
             }
         } else {
-            echo $result;
+            return $result;
         }
-        exit;
     }
 
     /****
