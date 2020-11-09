@@ -3,7 +3,7 @@ thinkphp6-ueditor文件上传模块
 
 安装 composer require hahadu/think-ueditor
 
-使用：
+#### 使用：
 ```php
 //在当前控制器或者公共控制器中
     public function ueditor(){
