@@ -14,11 +14,20 @@
  *  | Description:   helper
  *  +----------------------------------------------------------------------
  **/
-
+use Hahadu\ThinkUeditor\ThinkUeditor;
 if(!function_exists('ueditor')){
-    function ueditor(){
+    /*****
+     * 返回ueditor数据
+     * @param false $callback_array 是否返回数组 true 返回数组，false 返回json
+     * @return mixed|string|\think\response\Json
+     */
+    function ueditor($callback_array=false){
         $ueditor = new ThinkUeditor();
-        return $ueditor->ueditor();
+        $editor = $ueditor->ueditor();
+        if(true == $callback_array){
+            return json_decode($editor);
+        }
+        return $editor;
     }
 }
 

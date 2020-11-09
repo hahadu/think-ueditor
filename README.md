@@ -11,6 +11,11 @@ thinkphp6-ueditor文件上传模块
         echo $ueditor->ueditor(); 
         die; //防止开发模式下track冲突，
     }
+//或者使用便捷函数ueditor()
+    public function ueditor(){
+    //    return json(ueditor(true)); //开发模式 ，APP_DEBUG=true时用这个
+        return ueditor(); //生产模式，
+    }
 ``` 
 然后模板文件：
 ```html

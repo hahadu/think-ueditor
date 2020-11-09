@@ -61,9 +61,9 @@ class ThinkUeditor
                 break;
 
             default:
-                $result = json_encode(array(
+                $result = array(
                     'state'=> '请求地址出错'
-                ));
+                );
                 break;
         }
 
@@ -71,14 +71,14 @@ class ThinkUeditor
 
         if (!empty(request()->param("callback"))) {
             if (preg_match("/^[\w_]+$/", request()->param("callback"))) {
-                return htmlspecialchars(request()->param("callback")) . '(' . $result . ')';
+                return htmlspecialchars(request()->param("callback")) . '(' . json_encode($result) . ')';
             } else {
                 return json_encode(array(
                     'state'=> 'callback参数不合法'
                 ));
             }
         } else {
-            return $result;
+            return json_encode($result);
         }
     }
 
@@ -86,7 +86,7 @@ class ThinkUeditor
      * 上传文件
      * @param $_conf
      * @param $action
-     * @return false|string
+     * @return false|string|array
      */
     private function upload($action){
 
@@ -130,7 +130,7 @@ class ThinkUeditor
          */
 
         /* 返回数据 */
-        return json_encode($result);
+        return $result;
     }
 
     private function list($action){
@@ -181,12 +181,12 @@ class ThinkUeditor
 //}
 
         /* 返回数据 */
-        $result = json_encode(array(
+        $result = array(
             "state" => "SUCCESS",
             "list" => $list,
             "start" => $start,
             "total" => count($files)
-        ));
+        );
 
         return $result;
 
@@ -218,10 +218,10 @@ class ThinkUeditor
         }
 
         /* 返回抓取数据 */
-        return json_encode(array(
+        return array(
             'state'=> count($list) ? 'SUCCESS':'ERROR',
             'list'=> $list
-        ));
+        );
     }
 
 
@@ -260,7 +260,7 @@ class ThinkUeditor
         }
 
 
-        return json_encode($CONFIG);
+        return $CONFIG;
     }
 
 }
