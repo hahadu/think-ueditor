@@ -5,7 +5,7 @@
  *  +----------------------------------------------------------------------
  *  | Copyright (c) 2020. [hahadu] All rights reserved.
  *  +----------------------------------------------------------------------
- *  | SiteUrl: https://github.com/hahadu/wechat
+ *  | SiteUrl: https://github.com/hahadu/think-ueditor
  *  +----------------------------------------------------------------------
  *  | Author: hahadu <582167246@qq.com>
  *  +----------------------------------------------------------------------
@@ -68,18 +68,11 @@ class Uploader extends BaseUploader
      */
     protected function upBase64()
     {
-        $this->base64_cache_files();
-        $this->uploadFile();
-
-    }
-    private function base64_cache_files(){
         $base64Data = request()->post($this->fileField);
-        $img = base64_decode($base64Data);
-
-        $cache_path = Filesystem::path($this->config['oriName']);
-        file_put_contents($cache_path,$img);
-        $this->file = new File($cache_path);
-        return $this->file;
+        $file_info = base64_file_info($base64Data,$this->config['oriName']);
+        $this->config['oriName'] = $file_info->getFilename();
+        $this->file = $file_info;
+        $this->uploadFile();
     }
 
 
