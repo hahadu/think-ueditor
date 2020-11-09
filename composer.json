@@ -4,7 +4,7 @@
     "type": "think-extend",
     "require": {
         "php": ">=7.1",
-        "hahadu/image-factory": "^1.0",
+        "hahadu/image-factory": ">=1.0",
         "hahadu/think-helper": "*",
         "ext-json": "*"
     },
