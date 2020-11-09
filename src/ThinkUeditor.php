@@ -162,12 +162,12 @@ class ThinkUeditor
         $path = request()->server('DOCUMENT_ROOT') . (substr($path, 0, 1) == "/" ? "":"/") . $path;
         $files = $this->getfiles($path, $allowFiles);
         if (!count($files)) {
-            return json_encode(array(
+            return array(
                 "state" => "no match file",
                 "list" => array(),
                 "start" => $start,
                 "total" => count($files)
-            ));
+            );
         }
 
         /* 获取指定范围的列表 */
