@@ -62,6 +62,7 @@ class Uploader extends BaseUploader
         $this->uploadFile();
 
     }
+
     /**
      * 处理base64编码的图片上传
      * @return mixed

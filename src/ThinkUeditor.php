@@ -17,7 +17,9 @@
 
 namespace Hahadu\ThinkUeditor;
 use Hahadu\ThinkUeditor\Uploader\Uploader;
+use Hahadu\Helper\JsonHelper;
 use Hahadu\ThinkUeditor\UeditorConfig;
+use think\Exception;
 
 class ThinkUeditor
 {
@@ -26,6 +28,9 @@ class ThinkUeditor
         $this->config = new UeditorConfig();
     }
 
+    /******
+     * @return string|\think\response\Json
+     */
     public function ueditor(){
 
         $action = request()->param('action');
@@ -71,14 +76,18 @@ class ThinkUeditor
 
         if (!empty(request()->param("callback"))) {
             if (preg_match("/^[\w_]+$/", request()->param("callback"))) {
-                return htmlspecialchars(request()->param("callback")) . '(' . json_encode($result) . ')';
+                if (class_exists('\think\response\\' . ucfirst(strtolower(request()->param("callback"))))) {
+                    return response($result, 200, [], request()->param("callback"))->options([]);
+                } else {
+                    return htmlspecialchars(request()->param("callback")) . '(' . JsonHelper::json_encode($result) . ')';
+                }
             } else {
-                return json_encode(array(
-                    'state'=> 'callback参数不合法'
-                ));
+                return json(make_array(array(
+                    'state' => 'callback参数不合法'
+                )));
             }
         } else {
-            return json_encode($result);
+            return json(make_array($result));
         }
     }
 
